@@ -9,12 +9,14 @@ class CompetitionRegistration extends Model
 {
     protected $fillable = [
         'competition_id',
+        'player_id',
         'name',
         'phone',
         'email',
         'gamertag',
         'game',
         'state',
+        'reference_code',
         'payment_status',
         'sale_id',
     ];
@@ -22,6 +24,11 @@ class CompetitionRegistration extends Model
     public function competition(): BelongsTo
     {
         return $this->belongsTo(Competition::class);
+    }
+
+    public function player(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'player_id');
     }
 
     public function sale(): BelongsTo

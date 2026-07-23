@@ -10,10 +10,13 @@ class EnsureUserHasRole
 {
     /**
      * @param  Closure(Request): (Response)  $next
+     * @param  string  ...$roles  e.g. "role:admin,cashier" passes ("admin", "cashier")
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (! $request->user() || $request->user()->role !== $role) {
+        $user = $request->user();
+
+        if (! $user || ! in_array($user->role, $roles, true) || ! $user->is_active) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

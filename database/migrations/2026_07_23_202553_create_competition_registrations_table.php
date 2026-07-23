@@ -11,12 +11,14 @@ return new class extends Migration
         Schema::create('competition_registrations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('competition_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('player_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('name');
             $table->string('phone');
             $table->string('email');
             $table->string('gamertag');
             $table->string('game');
             $table->string('state');
+            $table->string('reference_code')->nullable()->unique();
             $table->enum('payment_status', ['pending', 'paid'])->default('pending');
             $table->foreignId('sale_id')->nullable()->constrained('sales')->nullOnDelete();
             $table->timestamps();

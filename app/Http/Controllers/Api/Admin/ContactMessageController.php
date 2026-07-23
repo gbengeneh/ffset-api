@@ -13,7 +13,7 @@ class ContactMessageController extends Controller
         $messages = ContactMessage::query()
             ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
             ->latest()
-            ->get();
+            ->paginate(20);
 
         return response()->json($messages);
     }

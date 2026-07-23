@@ -9,9 +9,28 @@ use App\Models\ContactMessage;
 use App\Models\Event;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    public function cashier(Request $request)
+    {
+        $user = $request->user();
+
+        $ownSales = Sale::where('status', 'completed')
+            ->whereDate('created_at', today())
+            ->when($user->role === User::ROLE_CASHIER, fn ($query) => $query->where('staff_id', $user->id));
+
+        return response()->json([
+            'sales_today_count' => (clone $ownSales)->count(),
+            'sales_today_total' => (float) (clone $ownSales)->sum('total'),
+            'low_stock_products' => Product::where('is_stocked', true)
+                ->whereColumn('stock_quantity', '<=', 'low_stock_threshold')
+                ->get(['id', 'name', 'stock_quantity', 'low_stock_threshold']),
+        ]);
+    }
+
     public function stats()
     {
         return response()->json([

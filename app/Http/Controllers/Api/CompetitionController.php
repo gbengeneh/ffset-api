@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompetitionRegistrationRequest;
+use App\Http\Resources\CompetitionRegistrationResource;
 use App\Models\Competition;
 use App\Models\CompetitionRegistration;
+use App\Models\User;
 use App\Services\SaleService;
 use App\Services\TelegramNotifier;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CompetitionController extends Controller
 {
@@ -29,10 +32,16 @@ class CompetitionController extends Controller
 
     public function register(StoreCompetitionRegistrationRequest $request, Competition $competition)
     {
-        $registration = DB::transaction(function () use ($request, $competition) {
+        /** @var User|null $player */
+        $player = $request->user('sanctum');
+        $player = $player && $player->role === User::ROLE_PLAYER ? $player : null;
+
+        $registration = DB::transaction(function () use ($request, $competition, $player) {
             $registration = CompetitionRegistration::create([
                 ...$request->validated(),
                 'competition_id' => $competition->id,
+                'player_id' => $player?->id,
+                'reference_code' => 'FFC-'.strtoupper(Str::random(8)),
                 'payment_status' => 'pending',
             ]);
 
@@ -54,6 +63,7 @@ class CompetitionController extends Controller
         });
 
         $this->telegram->send('Competition Registration', [
+            'Registration ID' => $registration->reference_code,
             'Competition' => $competition->title,
             'Full Name' => $registration->name,
             'Phone Number' => $registration->phone,
@@ -63,6 +73,8 @@ class CompetitionController extends Controller
             'State' => $registration->state,
         ]);
 
-        return response()->json($registration->fresh('sale'), 201);
+        return (new CompetitionRegistrationResource($registration->fresh('sale')))
+            ->response()
+            ->setStatusCode(201);
     }
 }

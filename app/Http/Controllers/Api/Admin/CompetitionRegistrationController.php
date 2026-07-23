@@ -17,7 +17,7 @@ class CompetitionRegistrationController extends Controller
             ->with('competition')
             ->when($request->query('competition_id'), fn ($query, $id) => $query->where('competition_id', $id))
             ->latest()
-            ->get();
+            ->paginate(20);
 
         return response()->json($registrations);
     }

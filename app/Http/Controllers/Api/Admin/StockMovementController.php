@@ -14,7 +14,7 @@ class StockMovementController extends Controller
             ->with('product')
             ->when($request->query('product_id'), fn ($query, $id) => $query->where('product_id', $id))
             ->latest()
-            ->get();
+            ->paginate(20);
 
         return response()->json($movements);
     }

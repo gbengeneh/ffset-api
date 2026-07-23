@@ -12,6 +12,17 @@ use Illuminate\Support\Str;
 class SaleService
 {
     /**
+     * Products that just crossed into low stock during the current
+     * createSale()/completeSale() call, flushed to Telegram only after the
+     * transaction commits (so a rollback never leaves a false alert sent).
+     *
+     * @var array<int, array{name: string, stock_quantity: int, low_stock_threshold: int}>
+     */
+    private array $pendingLowStockAlerts = [];
+
+    public function __construct(private TelegramNotifier $telegram) {}
+
+    /**
      * Create a sale with its line items. Stock is only deducted immediately
      * when the sale is created as "completed" (in-lounge POS sale). Sales
      * created as "pending" (public wine reservations, competition entries
@@ -21,7 +32,9 @@ class SaleService
      */
     public function createSale(array $data): Sale
     {
-        return DB::transaction(function () use ($data) {
+        $this->pendingLowStockAlerts = [];
+
+        $sale = DB::transaction(function () use ($data) {
             $sale = Sale::create([
                 'sale_number' => 'FF-'.now()->format('Ymd').'-'.strtoupper(Str::random(6)),
                 'staff_id' => $data['staff_id'] ?? null,
@@ -59,6 +72,10 @@ class SaleService
 
             return $sale->fresh('items.product');
         });
+
+        $this->flushLowStockAlerts();
+
+        return $sale;
     }
 
     /**
@@ -67,7 +84,9 @@ class SaleService
      */
     public function completeSale(Sale $sale, ?int $userId = null): Sale
     {
-        return DB::transaction(function () use ($sale, $userId) {
+        $this->pendingLowStockAlerts = [];
+
+        $sale = DB::transaction(function () use ($sale, $userId) {
             $sale = Sale::where('id', $sale->id)->lockForUpdate()->firstOrFail();
 
             if ($sale->status === 'completed') {
@@ -83,6 +102,10 @@ class SaleService
 
             return $sale->fresh('items.product');
         });
+
+        $this->flushLowStockAlerts();
+
+        return $sale;
     }
 
     /**
@@ -119,14 +142,37 @@ class SaleService
             );
         }
 
+        $before = $product->stock_quantity;
         $product->decrement('stock_quantity', $quantity);
+        $after = $product->fresh()->stock_quantity;
 
         StockMovement::create([
             'product_id' => $product->id,
             'type' => 'sale',
             'quantity_change' => -$quantity,
-            'resulting_quantity' => $product->fresh()->stock_quantity,
+            'resulting_quantity' => $after,
             'created_by' => $userId,
         ]);
+
+        if ($before > $product->low_stock_threshold && $after <= $product->low_stock_threshold) {
+            $this->pendingLowStockAlerts[] = [
+                'name' => $product->name,
+                'stock_quantity' => $after,
+                'low_stock_threshold' => $product->low_stock_threshold,
+            ];
+        }
+    }
+
+    private function flushLowStockAlerts(): void
+    {
+        foreach ($this->pendingLowStockAlerts as $alert) {
+            $this->telegram->send('Low Stock Alert', [
+                'Product' => $alert['name'],
+                'Remaining Stock' => (string) $alert['stock_quantity'],
+                'Threshold' => (string) $alert['low_stock_threshold'],
+            ]);
+        }
+
+        $this->pendingLowStockAlerts = [];
     }
 }

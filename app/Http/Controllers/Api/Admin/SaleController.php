@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSaleRequest;
 use App\Models\Sale;
+use App\Models\User;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
 
@@ -19,8 +20,9 @@ class SaleController extends Controller
             ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
             ->when($request->query('from'), fn ($query, $from) => $query->whereDate('created_at', '>=', $from))
             ->when($request->query('to'), fn ($query, $to) => $query->whereDate('created_at', '<=', $to))
+            ->when($request->user()->role === User::ROLE_CASHIER, fn ($query) => $query->where('staff_id', $request->user()->id))
             ->latest()
-            ->get();
+            ->paginate(20);
 
         return response()->json($sales);
     }
@@ -35,8 +37,12 @@ class SaleController extends Controller
         return response()->json($sale, 201);
     }
 
-    public function show(Sale $sale)
+    public function show(Request $request, Sale $sale)
     {
+        if ($request->user()->role === User::ROLE_CASHIER && $sale->staff_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
         return response()->json($sale->load('items.product'));
     }
 
