@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RestockProductRequest;
 use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UploadProductImageRequest;
 use App\Models\Product;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -53,6 +56,19 @@ class ProductController extends Controller
             $request->string('reason')->toString() ?: null,
             $request->user()->id,
         );
+
+        return response()->json($product);
+    }
+
+    public function uploadImage(UploadProductImageRequest $request, Product $product)
+    {
+        if ($product->image_url && Str::startsWith($product->image_url, '/storage/')) {
+            Storage::disk('public')->delete(Str::after($product->image_url, '/storage/'));
+        }
+
+        $path = $request->file('image')->store('products', 'public');
+
+        $product->update(['image_url' => Storage::url($path)]);
 
         return response()->json($product);
     }

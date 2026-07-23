@@ -28,7 +28,7 @@ class SaleService
      * created as "pending" (public wine reservations, competition entries
      * awaiting payment) leave stock untouched until completeSale() runs.
      *
-     * @param  array{staff_id?:int|null, customer_name?:string|null, source:string, reference_id?:int|null, payment_method?:string|null, status?:string, items: array<int, array{product_id:int, quantity:int}>}  $data
+     * @param  array{staff_id?:int|null, cash_shift_id?:int|null, customer_name?:string|null, customer_email?:string|null, source:string, reference_id?:int|null, payment_method?:string|null, payment_reference?:string|null, status?:string, items: array<int, array{product_id:int, quantity:int}>}  $data
      */
     public function createSale(array $data): Sale
     {
@@ -38,10 +38,13 @@ class SaleService
             $sale = Sale::create([
                 'sale_number' => 'FF-'.now()->format('Ymd').'-'.strtoupper(Str::random(6)),
                 'staff_id' => $data['staff_id'] ?? null,
+                'cash_shift_id' => $data['cash_shift_id'] ?? null,
                 'customer_name' => $data['customer_name'] ?? null,
+                'customer_email' => $data['customer_email'] ?? null,
                 'source' => $data['source'] ?? 'pos',
                 'reference_id' => $data['reference_id'] ?? null,
                 'payment_method' => $data['payment_method'] ?? null,
+                'payment_reference' => $data['payment_reference'] ?? null,
                 'status' => $data['status'] ?? 'pending',
                 'subtotal' => 0,
                 'total' => 0,

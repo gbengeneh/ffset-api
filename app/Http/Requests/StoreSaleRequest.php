@@ -15,6 +15,7 @@ class StoreSaleRequest extends FormRequest
     {
         return [
             'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
             'payment_method' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,completed'],
             'items' => ['required', 'array', 'min:1'],

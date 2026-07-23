@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSaleRequest;
+use App\Models\CashShift;
 use App\Models\Sale;
 use App\Models\User;
 use App\Services\SaleService;
@@ -29,9 +30,24 @@ class SaleController extends Controller
 
     public function store(StoreSaleRequest $request)
     {
+        $cashShiftId = null;
+
+        if ($request->user()->role === User::ROLE_CASHIER) {
+            $openShift = CashShift::where('cashier_id', $request->user()->id)
+                ->where('status', 'open')
+                ->first();
+
+            if (! $openShift) {
+                return response()->json(['message' => 'Open a till shift before recording sales.'], 422);
+            }
+
+            $cashShiftId = $openShift->id;
+        }
+
         $sale = $this->sales->createSale([
             ...$request->validated(),
             'staff_id' => $request->user()->id,
+            'cash_shift_id' => $cashShiftId,
         ]);
 
         return response()->json($sale, 201);

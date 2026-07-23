@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Api\Admin\CashShiftController;
 use App\Http\Controllers\Api\Admin\CompetitionController as AdminCompetitionController;
 use App\Http\Controllers\Api\Admin\CompetitionRegistrationController;
 use App\Http\Controllers\Api\Admin\ContactMessageController as AdminContactMessageController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\CompetitionController;
 use App\Http\Controllers\Api\ContactMessageController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\GalleryController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlayerController;
 use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
@@ -28,7 +30,22 @@ Route::post('/auth/login', [AuthController::class, 'login'])->middleware('thrott
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/email/resend', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1');
 });
+
+Route::get('/auth/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
+
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/auth/password/forgot', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/password/reset', [AuthController::class, 'resetPassword']);
+});
+
+// Payments (Paystack)
+Route::post('/payments/sales/{sale}/initialize', [PaymentController::class, 'initialize'])->middleware('throttle:10,1');
+Route::get('/payments/verify/{reference}', [PaymentController::class, 'verify']);
+Route::post('/payments/webhook/paystack', [PaymentController::class, 'webhook']);
 
 // Public catalog + submissions
 Route::get('/products', [ProductController::class, 'index']);
@@ -58,6 +75,11 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::post('/sales', [SaleController::class, 'store']);
         Route::get('/sales/{sale}', [SaleController::class, 'show']);
         Route::get('/dashboard/cashier', [DashboardController::class, 'cashier']);
+
+        Route::get('/shifts', [CashShiftController::class, 'index']);
+        Route::get('/shifts/current', [CashShiftController::class, 'current']);
+        Route::post('/shifts/open', [CashShiftController::class, 'open']);
+        Route::post('/shifts/{cashShift}/close', [CashShiftController::class, 'close']);
     });
 
     // Admin-only: content management, financials, staff, and stock control
@@ -68,6 +90,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
         Route::apiResource('products', AdminProductController::class)->only(['store', 'update', 'destroy']);
         Route::post('/products/{product}/restock', [AdminProductController::class, 'restock']);
+        Route::post('/products/{product}/image', [AdminProductController::class, 'uploadImage']);
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
 
         Route::apiResource('events', AdminEventController::class)->except(['show']);

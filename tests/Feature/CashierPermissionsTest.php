@@ -17,6 +17,8 @@ class CashierPermissionsTest extends TestCase
         $cashier = User::factory()->create(['role' => 'cashier']);
         Sanctum::actingAs($cashier, ['*']);
 
+        $this->postJson('/api/admin/shifts/open', ['opening_float' => 10000])->assertCreated();
+
         return $cashier;
     }
 
