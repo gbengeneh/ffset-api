@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompetitionRequest;
 use App\Models\Competition;
+use Illuminate\Http\Request;
 
 class CompetitionController extends Controller
 {
@@ -30,5 +31,16 @@ class CompetitionController extends Controller
         $competition->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function updateStatus(Request $request, Competition $competition)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:upcoming,open,closed,completed'],
+        ]);
+
+        $competition->update($validated);
+
+        return response()->json($competition);
     }
 }

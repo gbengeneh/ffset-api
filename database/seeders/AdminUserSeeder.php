@@ -20,6 +20,7 @@ class AdminUserSeeder extends Seeder
                 'name' => 'FFSET Admin',
                 'password' => env('ADMIN_PASSWORD', 'password'),
                 'role' => 'admin',
+                'email_verified_at' => now(),
             ]
         );
     }

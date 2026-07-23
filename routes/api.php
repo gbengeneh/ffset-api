@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AnalyticsController;
 use App\Http\Controllers\Api\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Api\Admin\CashShiftController;
 use App\Http\Controllers\Api\Admin\CompetitionController as AdminCompetitionController;
@@ -88,6 +89,11 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::get('/reports/sales', [SalesReportController::class, 'sales']);
         Route::patch('/sales/{sale}/status', [SaleController::class, 'updateStatus']);
 
+        Route::get('/analytics/top-products', [AnalyticsController::class, 'topProducts']);
+        Route::get('/analytics/competitions', [AnalyticsController::class, 'competitions']);
+        Route::get('/analytics/bookings', [AnalyticsController::class, 'bookings']);
+        Route::get('/analytics/players', [AnalyticsController::class, 'players']);
+
         Route::apiResource('products', AdminProductController::class)->only(['store', 'update', 'destroy']);
         Route::post('/products/{product}/restock', [AdminProductController::class, 'restock']);
         Route::post('/products/{product}/image', [AdminProductController::class, 'uploadImage']);
@@ -95,6 +101,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
         Route::apiResource('events', AdminEventController::class)->except(['show']);
         Route::apiResource('competitions', AdminCompetitionController::class)->except(['show']);
+        Route::patch('/competitions/{competition}/status', [AdminCompetitionController::class, 'updateStatus']);
         Route::apiResource('gallery', AdminGalleryController::class)->except(['show']);
 
         Route::get('/bookings', [AdminBookingController::class, 'index']);

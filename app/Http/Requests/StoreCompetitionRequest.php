@@ -22,6 +22,9 @@ class StoreCompetitionRequest extends FormRequest
             'third_prize' => ['required', 'numeric', 'min:0'],
             'rules' => ['nullable', 'array'],
             'rules.*' => ['string'],
+            'registration_opens_at' => ['nullable', 'date'],
+            'registration_closes_at' => ['nullable', 'date', 'after:registration_opens_at'],
+            'event_date' => ['nullable', 'date'],
             'status' => ['required', 'in:upcoming,open,closed,completed'],
         ];
     }

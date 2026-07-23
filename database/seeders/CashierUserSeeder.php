@@ -19,6 +19,7 @@ class CashierUserSeeder extends Seeder
                 'name' => 'FFSET Cashier',
                 'password' => env('CASHIER_PASSWORD', 'password'),
                 'role' => User::ROLE_CASHIER,
+                'email_verified_at' => now(),
             ]
         );
     }

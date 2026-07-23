@@ -16,6 +16,9 @@ class Competition extends Model
         'second_prize',
         'third_prize',
         'rules',
+        'registration_opens_at',
+        'registration_closes_at',
+        'event_date',
         'status',
     ];
 
@@ -27,6 +30,9 @@ class Competition extends Model
             'second_prize' => 'decimal:2',
             'third_prize' => 'decimal:2',
             'rules' => 'array',
+            'registration_opens_at' => 'datetime',
+            'registration_closes_at' => 'datetime',
+            'event_date' => 'datetime',
         ];
     }
 

@@ -17,6 +17,9 @@ return new class extends Migration
             $table->decimal('second_prize', 12, 2)->default(0);
             $table->decimal('third_prize', 12, 2)->default(0);
             $table->json('rules')->nullable();
+            $table->timestamp('registration_opens_at')->nullable();
+            $table->timestamp('registration_closes_at')->nullable();
+            $table->timestamp('event_date')->nullable();
             $table->enum('status', ['upcoming', 'open', 'closed', 'completed'])->default('upcoming');
             $table->timestamps();
         });

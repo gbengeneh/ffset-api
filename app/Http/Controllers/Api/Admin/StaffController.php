@@ -22,6 +22,11 @@ class StaffController extends Controller
     {
         $staff = User::create($request->validated());
 
+        // Staff accounts are provisioned by an admin, never self-registered,
+        // so there's nothing to verify — mark it verified immediately rather
+        // than routing them through the player email-verification flow.
+        $staff->forceFill(['email_verified_at' => now()])->save();
+
         return response()->json($staff->only(['id', 'name', 'email', 'phone', 'role', 'is_active']), 201);
     }
 
