@@ -1,0 +1,417 @@
+openapi: 3.1.0
+info:
+  title: FFSET API
+  version: 1.0.0
+  description: API for the FFSET lounge, customer accounts, marketplace catalogue, checkout, payments, POS, inventory, and administration.
+servers:
+  - url: /
+    description: Current environment
+tags:
+  - name: System
+  - name: Authentication
+  - name: Customer
+  - name: Marketplace
+  - name: Payments
+  - name: Public lounge
+  - name: Marketplace administration
+  - name: Lounge administration
+paths:
+  /api/health:
+    get:
+      tags: [System]
+      summary: Check API and database health
+      responses:
+        '200': { description: API and database are healthy, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } } }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a customer account
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } } } }
+      responses:
+        '201': { description: Account created, content: { application/json: { schema: { $ref: '#/components/schemas/AuthSession' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Sign in to any active account
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } } }
+      responses:
+        '200': { description: Authenticated, content: { application/json: { schema: { $ref: '#/components/schemas/AuthSession' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Return the authenticated account
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Current account, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current access token
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Signed out }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /api/auth/password/forgot:
+    post:
+      tags: [Authentication]
+      summary: Request a password-reset link
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } } }
+      responses:
+        '200': { description: Request accepted }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/auth/password/reset:
+    post:
+      tags: [Authentication]
+      summary: Reset an account password
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email, token, password, password_confirmation], properties: { email: { type: string, format: email }, token: { type: string }, password: { type: string, format: password }, password_confirmation: { type: string, format: password } } } } } }
+      responses:
+        '200': { description: Password reset }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/customer/profile:
+    get:
+      tags: [Customer]
+      summary: Get the signed-in customer's saved checkout profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Customer profile, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    put:
+      tags: [Customer]
+      summary: Update saved checkout information
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerProfileInput' } } } }
+      responses:
+        '200': { description: Updated profile, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerProfile' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/customer/orders:
+    get:
+      tags: [Customer]
+      summary: List only the signed-in customer's marketplace orders
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated order history, content: { application/json: { schema: { $ref: '#/components/schemas/MarketplaceOrderCollection' } } } }
+  /api/customer/orders/{order}:
+    get:
+      tags: [Customer]
+      summary: Get one owned marketplace order
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200': { description: Order details, content: { application/json: { schema: { $ref: '#/components/schemas/MarketplaceOrder' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/marketplace/categories:
+    get:
+      tags: [Marketplace]
+      summary: List active store categories
+      responses:
+        '200': { description: Categories, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } } }
+  /api/marketplace/delivery-zones:
+    get:
+      tags: [Marketplace]
+      summary: List active delivery zones and fees
+      responses:
+        '200': { description: Delivery zones, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/DeliveryZone' } } } } }
+  /api/marketplace/listings:
+    get:
+      tags: [Marketplace]
+      summary: Search and filter marketplace listings
+      parameters:
+        - { name: category, in: query, schema: { type: string }, description: Category slug }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: condition, in: query, schema: { type: string } }
+        - { name: min_price, in: query, schema: { type: number } }
+        - { name: max_price, in: query, schema: { type: number } }
+        - { name: sort, in: query, schema: { type: string, enum: [newest, price_asc, price_desc] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        '200': { description: Paginated listings, content: { application/json: { schema: { $ref: '#/components/schemas/ListingCollection' } } } }
+  /api/marketplace/listings/{slug}:
+    get:
+      tags: [Marketplace]
+      summary: Get a listing with images, category details, and variants
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Listing, content: { application/json: { schema: { $ref: '#/components/schemas/Listing' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/marketplace/orders:
+    post:
+      tags: [Marketplace]
+      summary: Create a guest or authenticated customer order
+      description: Prices, fees, exact variants, and stock are validated by the server. Include a bearer token to attach the order to customer history.
+      security: [{}, { bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateMarketplaceOrder' } } } }
+      responses:
+        '201': { description: Order created and stock reserved, content: { application/json: { schema: { $ref: '#/components/schemas/MarketplaceOrder' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/payments/marketplace-orders/{reference}/initialize:
+    post:
+      tags: [Payments]
+      summary: Initialize Paystack checkout for a marketplace order
+      parameters: [{ name: reference, in: path, required: true, schema: { type: string }, description: Marketplace order reference code }]
+      responses:
+        '200': { description: Paystack authorization details, content: { application/json: { schema: { $ref: '#/components/schemas/PaymentInitialization' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /api/payments/marketplace/verify/{reference}:
+    get:
+      tags: [Payments]
+      summary: Verify and finalize a marketplace payment
+      parameters: [{ name: reference, in: path, required: true, schema: { type: string }, description: Paystack transaction reference }]
+      responses:
+        '200': { description: Updated order, content: { application/json: { schema: { $ref: '#/components/schemas/MarketplaceOrder' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/payments/webhook/paystack:
+    post:
+      tags: [Payments]
+      summary: Receive signed Paystack webhook events
+      responses:
+        '200': { description: Event accepted }
+        '401': { description: Invalid signature }
+  /api/products:
+    get:
+      tags: [Public lounge]
+      summary: List lounge products
+      responses: { '200': { description: Products } }
+  /api/events:
+    get:
+      tags: [Public lounge]
+      summary: List public events
+      responses: { '200': { description: Events } }
+  /api/competitions:
+    get:
+      tags: [Public lounge]
+      summary: List competitions
+      responses: { '200': { description: Competitions } }
+  /api/bookings:
+    post:
+      tags: [Public lounge]
+      summary: Submit a lounge booking
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      responses: { '201': { description: Booking created }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/contact:
+    post:
+      tags: [Public lounge]
+      summary: Submit a contact message
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      responses: { '201': { description: Message created }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/marketplace/categories:
+    get:
+      tags: [Marketplace administration]
+      summary: List all marketplace categories
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Categories }, '403': { $ref: '#/components/responses/Forbidden' } }
+    post:
+      tags: [Marketplace administration]
+      summary: Create a marketplace category
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInput' } } } }
+      responses: { '201': { description: Category created }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/marketplace/listings:
+    get:
+      tags: [Marketplace administration]
+      summary: List listings for administration
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated listings } }
+    post:
+      tags: [Marketplace administration]
+      summary: Create a category-specific listing
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ListingInput' } } } }
+      responses: { '201': { description: Listing created }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/marketplace/listings/{listing}:
+    patch:
+      tags: [Marketplace administration]
+      summary: Update a marketplace listing
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ListingId' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ListingInput' } } } }
+      responses: { '200': { description: Listing updated }, '422': { $ref: '#/components/responses/ValidationError' } }
+    delete:
+      tags: [Marketplace administration]
+      summary: Delete a marketplace listing
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ListingId' }]
+      responses: { '204': { description: Listing deleted } }
+  /api/admin/marketplace/listings/{listing}/image:
+    post:
+      tags: [Marketplace administration]
+      summary: Upload a listing image
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ListingId' }]
+      requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, required: [image], properties: { image: { type: string, format: binary }, alt_text: { type: string } } } } } }
+      responses: { '200': { description: Listing with uploaded image }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/marketplace/listings/{listing}/variants/generate:
+    post:
+      tags: [Marketplace administration]
+      summary: Generate missing option combinations for a listing
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ListingId' }]
+      responses: { '200': { description: Generated variants } }
+  /api/admin/marketplace/orders:
+    get:
+      tags: [Marketplace administration]
+      summary: List marketplace fulfilment orders separately from POS
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated marketplace orders } }
+  /api/admin/marketplace/orders/{order}:
+    get:
+      tags: [Marketplace administration]
+      summary: Get complete fulfilment and payment detail
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses: { '200': { description: Order detail } }
+    patch:
+      tags: [Marketplace administration]
+      summary: Transition fulfilment status or update tracking and notes
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { status: { type: string, enum: [confirmed, processing, ready_for_pickup, dispatched, delivered, cancelled] }, tracking_reference: { type: string }, internal_notes: { type: string }, cancellation_reason: { type: string } } } } } }
+      responses: { '200': { description: Updated order }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/marketplace/orders/{order}/refund:
+    post:
+      tags: [Marketplace administration]
+      summary: Request a Paystack refund and restore stock
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { reason: { type: string } } } } } }
+      responses: { '200': { description: Refund accepted }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/marketplace/delivery-zones:
+    get:
+      tags: [Marketplace administration]
+      summary: List delivery zones
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Delivery zones } }
+    post:
+      tags: [Marketplace administration]
+      summary: Create a delivery zone
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/DeliveryZoneInput' } } } }
+      responses: { '201': { description: Zone created }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/products:
+    get:
+      tags: [Lounge administration]
+      summary: List POS products
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Products } }
+  /api/admin/sales:
+    get:
+      tags: [Lounge administration]
+      summary: List POS sales
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Sales } }
+    post:
+      tags: [Lounge administration]
+      summary: Create a POS sale
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      responses: { '201': { description: Sale created }, '422': { $ref: '#/components/responses/ValidationError' } }
+  /api/admin/purchase-invoices:
+    get:
+      tags: [Lounge administration]
+      summary: List purchase invoices
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Purchase invoices } }
+    post:
+      tags: [Lounge administration]
+      summary: Create a purchase invoice
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      responses: { '201': { description: Invoice created }, '422': { $ref: '#/components/responses/ValidationError' } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum token
+  parameters:
+    ListingId: { name: listing, in: path, required: true, schema: { type: integer } }
+    OrderId: { name: order, in: path, required: true, schema: { type: integer } }
+  responses:
+    Unauthenticated: { description: Missing or invalid access token, content: { application/json: { schema: { $ref: '#/components/schemas/Message' } } } }
+    Forbidden: { description: Account does not have the required role, content: { application/json: { schema: { $ref: '#/components/schemas/Message' } } } }
+    NotFound: { description: Resource not found, content: { application/json: { schema: { $ref: '#/components/schemas/Message' } } } }
+    ValidationError: { description: Validation failed, content: { application/json: { schema: { $ref: '#/components/schemas/ValidationError' } } } }
+    ServiceUnavailable: { description: A required service is unavailable, content: { application/json: { schema: { $ref: '#/components/schemas/Message' } } } }
+  schemas:
+    Message:
+      type: object
+      properties: { message: { type: string } }
+    ValidationError:
+      type: object
+      properties:
+        message: { type: string }
+        errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    Health:
+      type: object
+      properties: { status: { type: string }, database: { type: string } }
+    User:
+      type: object
+      properties: { id: { type: integer }, name: { type: string }, email: { type: string, format: email }, phone: { type: [string, 'null'] }, role: { type: string } }
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties: { name: { type: string }, email: { type: string, format: email }, phone: { type: [string, 'null'] }, password: { type: string, minLength: 8 }, password_confirmation: { type: string, minLength: 8 } }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties: { email: { type: string, format: email }, password: { type: string, format: password } }
+    AuthSession:
+      type: object
+      properties: { token: { type: string }, user: { $ref: '#/components/schemas/User' } }
+    CustomerProfile:
+      allOf:
+        - { $ref: '#/components/schemas/User' }
+        - type: object
+          properties: { delivery_address: { type: [string, 'null'] }, preferred_fulfillment_type: { type: string, enum: [pickup, delivery] }, preferred_delivery_zone_id: { type: [integer, 'null'] }, whatsapp_opt_in: { type: boolean }, email_verified: { type: boolean } }
+    CustomerProfileInput:
+      type: object
+      required: [name, email, phone, preferred_fulfillment_type, whatsapp_opt_in]
+      properties: { name: { type: string }, email: { type: string, format: email }, phone: { type: string }, delivery_address: { type: [string, 'null'] }, preferred_fulfillment_type: { type: string, enum: [pickup, delivery] }, preferred_delivery_zone_id: { type: [integer, 'null'] }, whatsapp_opt_in: { type: boolean } }
+    Category:
+      type: object
+      properties: { id: { type: integer }, parent_id: { type: [integer, 'null'] }, name: { type: string }, slug: { type: string }, description: { type: [string, 'null'] }, image_url: { type: [string, 'null'] }, listings_count: { type: integer } }
+    CategoryInput:
+      type: object
+      required: [name]
+      properties: { parent_id: { type: [integer, 'null'] }, name: { type: string }, slug: { type: string }, description: { type: [string, 'null'] }, image_url: { type: [string, 'null'], format: uri }, sort_order: { type: integer }, is_active: { type: boolean } }
+    DeliveryZone:
+      type: object
+      properties: { id: { type: integer }, name: { type: string }, state: { type: [string, 'null'] }, fee: { type: string }, estimated_delivery: { type: [string, 'null'] } }
+    DeliveryZoneInput:
+      type: object
+      required: [name, fee, is_active]
+      properties: { name: { type: string }, state: { type: [string, 'null'] }, cities: { type: array, items: { type: string } }, fee: { type: number, minimum: 0 }, estimated_delivery: { type: [string, 'null'] }, is_active: { type: boolean } }
+    Variant:
+      type: object
+      properties: { id: { type: integer }, sku: { type: [string, 'null'] }, options: { type: object, additionalProperties: { type: string } }, price: { type: [string, 'null'] }, stock_quantity: { type: integer }, is_active: { type: boolean } }
+    Listing:
+      type: object
+      properties: { id: { type: integer }, name: { type: string }, slug: { type: string }, sku: { type: [string, 'null'] }, price: { type: string }, deposit_amount: { type: [string, 'null'] }, condition: { type: string }, status: { type: string }, stock_quantity: { type: [integer, 'null'] }, category: { $ref: '#/components/schemas/Category' }, variants: { type: array, items: { $ref: '#/components/schemas/Variant' } }, images: { type: array, items: { type: object, properties: { id: { type: integer }, image_url: { type: string, format: uri }, alt_text: { type: [string, 'null'] } } } } }
+    ListingInput:
+      type: object
+      required: [category_id, name, price, condition, status]
+      properties: { category_id: { type: integer }, name: { type: string }, slug: { type: string }, sku: { type: [string, 'null'] }, description: { type: [string, 'null'] }, price: { type: number }, deposit_amount: { type: [number, 'null'] }, condition: { type: string }, status: { type: string }, stock_quantity: { type: [integer, 'null'] }, is_featured: { type: boolean }, vehicle: { type: [object, 'null'], additionalProperties: true }, fashion: { type: [object, 'null'], additionalProperties: true }, gadget: { type: [object, 'null'], additionalProperties: true } }
+    ListingCollection:
+      type: object
+      properties: { data: { type: array, items: { $ref: '#/components/schemas/Listing' } }, meta: { type: object, additionalProperties: true }, links: { type: object, additionalProperties: true } }
+    OrderItemInput:
+      type: object
+      required: [listing_id, quantity, purchase_type]
+      properties: { listing_id: { type: integer }, variant_id: { type: [integer, 'null'] }, quantity: { type: integer, minimum: 1, maximum: 20 }, purchase_type: { type: string, enum: [full, deposit] }, selected_options: { type: object, additionalProperties: { type: string } } }
+    CreateMarketplaceOrder:
+      type: object
+      required: [name, phone, email, fulfillment_type, items]
+      properties: { checkout_token: { type: [string, 'null'], format: uuid }, name: { type: string }, phone: { type: string }, email: { type: string, format: email }, whatsapp_opt_in: { type: boolean }, fulfillment_type: { type: string, enum: [pickup, delivery] }, delivery_zone_id: { type: [integer, 'null'] }, delivery_address: { type: [string, 'null'] }, notes: { type: [string, 'null'] }, items: { type: array, minItems: 1, items: { $ref: '#/components/schemas/OrderItemInput' } } }
+    MarketplaceOrder:
+      type: object
+      properties: { id: { type: integer }, reference_code: { type: string }, name: { type: string }, phone: { type: string }, email: { type: string }, fulfillment_type: { type: string }, delivery_address: { type: [string, 'null'] }, subtotal: { type: string }, delivery_fee: { type: string }, total: { type: string }, status: { type: string }, payment_status: { type: string }, tracking_reference: { type: [string, 'null'] }, created_at: { type: string, format: date-time }, items: { type: array, items: { type: object, additionalProperties: true } } }
+    MarketplaceOrderCollection:
+      type: object
+      properties: { data: { type: array, items: { $ref: '#/components/schemas/MarketplaceOrder' } }, meta: { type: object, additionalProperties: true }, links: { type: object, additionalProperties: true } }
+    PaymentInitialization:
+      type: object
+      properties: { authorization_url: { type: string, format: uri }, access_code: { type: string }, reference: { type: string } }
