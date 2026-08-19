@@ -23,9 +23,9 @@ DB_USERNAME=ffset
 DB_PASSWORD=replace-with-a-long-random-password
 ```
 
-## Coolify Nixpacks deployment
+## Coolify deployment
 
-Create an Application from this backend repository and select the **Nixpacks** build pack. Coolify will detect Laravel and generate the runtime image. Set the exposed port to `80`, attach the API domain, and configure all values from `deployment/api.env.example` in Coolify's Environment Variables screen.
+Create an Application from this backend repository and use Coolify's default automatic framework detection. Do not configure a custom build command, start command, or web-server configuration. Attach the API domain and configure the application values from `deployment/api.env.example` in Coolify's Environment Variables screen.
 
 Configure persistent storage in Coolify with destination `/app/storage/app/public`. Never mount over the whole `/app/storage` directory because application logs, framework cache directories, and generated paths must remain available inside the release. Run `php artisan storage:link` once from the Coolify terminal after the storage mount is active.
 
