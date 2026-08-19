@@ -18,7 +18,7 @@ class StoreStaffRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,cashier'],
+            'role' => ['required', 'in:admin,cashier,inventory'],
         ];
     }
 }

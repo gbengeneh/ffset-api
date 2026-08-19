@@ -1,0 +1,4 @@
+<?php
+namespace App\Console\Commands;
+use App\Models\MarketplaceOrder;use App\Services\MarketplaceOrderLifecycleService;use Illuminate\Console\Command;
+class ExpireMarketplaceOrders extends Command {protected $signature='marketplace:expire-orders';protected $description='Cancel unpaid marketplace orders after the checkout window';public function handle(MarketplaceOrderLifecycleService $lifecycle):int{$cutoff=now()->subMinutes((int)config('app.marketplace_order_expiry_minutes',60));$count=0;MarketplaceOrder::where('status','pending')->where('payment_status','unpaid')->where('created_at','<',$cutoff)->each(function($order)use($lifecycle,&$count){$lifecycle->transition($order,'cancelled',['cancellation_reason'=>'Payment window expired.']);$count++;});$this->info("Expired {$count} marketplace orders.");return self::SUCCESS;}}

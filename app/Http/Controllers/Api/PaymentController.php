@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CarOrder;
 use App\Models\CompetitionRegistration;
+use App\Models\Order;
 use App\Models\Sale;
+use App\Models\MarketplaceOrder;
 use App\Services\PaystackService;
 use App\Services\SaleService;
+use App\Services\MarketplaceOrderPaymentService;
+use App\Services\MarketplaceOrderLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -15,6 +20,8 @@ class PaymentController extends Controller
     public function __construct(
         private PaystackService $paystack,
         private SaleService $sales,
+        private MarketplaceOrderPaymentService $marketplacePayments,
+        private MarketplaceOrderLifecycleService $marketplaceLifecycle,
     ) {}
 
     public function initialize(Request $request, Sale $sale)
@@ -40,11 +47,15 @@ class PaymentController extends Controller
             ]);
         }
 
+        $frontendUrl = $sale->source === 'car_deposit'
+            ? config('app.frontend_autos_url')
+            : config('app.frontend_url');
+
         $data = $this->paystack->initialize([
             'email' => $email,
             'amount' => (int) round($sale->total * 100),
             'reference' => $sale->payment_reference,
-            'callback_url' => config('app.frontend_url').'/payment/callback',
+            'callback_url' => $frontendUrl.'/payment/callback',
             'metadata' => ['sale_id' => $sale->id],
         ]);
 
@@ -80,7 +91,14 @@ class PaymentController extends Controller
 
             if ($sale) {
                 $this->confirmPayment($sale);
+            } else {
+                $order = $reference ? MarketplaceOrder::where('payment_reference', $reference)->first() : null;
+                if ($order) $this->marketplacePayments->confirm($order, $payload['data']);
             }
+        } elseif (($payload['event'] ?? null) === 'refund.processed') {
+            $reference = $payload['data']['transaction_reference'] ?? $payload['data']['reference'] ?? null;
+            $order = $reference ? MarketplaceOrder::where('payment_reference', $reference)->first() : null;
+            if ($order && $order->payment_status === 'refund_pending') $this->marketplaceLifecycle->finalizeRefund($order);
         }
 
         return response()->json(['message' => 'ok']);
@@ -94,6 +112,18 @@ class PaymentController extends Controller
 
         if ($registration && $registration->payment_status !== 'paid') {
             $registration->update(['payment_status' => 'paid']);
+        }
+
+        $order = Order::where('sale_id', $sale->id)->first();
+
+        if ($order && $order->status === 'pending') {
+            $order->update(['status' => 'paid']);
+        }
+
+        $carOrder = CarOrder::where('sale_id', $sale->id)->first();
+
+        if ($carOrder && $carOrder->status === 'pending') {
+            $carOrder->update(['status' => 'paid']);
         }
 
         return $sale;

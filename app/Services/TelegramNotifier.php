@@ -29,13 +29,17 @@ class TelegramNotifier
             $lines[] = "{$label}: ".($value !== '' ? $value : '-');
         }
 
-        $response = Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
-            'chat_id' => $chatId,
-            'text' => implode("\n", $lines),
-        ]);
+        try {
+            $response = Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                'chat_id' => $chatId,
+                'text' => implode("\n", $lines),
+            ]);
 
-        if (! $response->successful()) {
-            Log::error('Telegram delivery failed.', ['body' => $response->body()]);
+            if (! $response->successful()) {
+                Log::error('Telegram delivery failed.', ['body' => $response->body()]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Telegram delivery threw an exception.', ['message' => $e->getMessage()]);
         }
     }
 }

@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -23,7 +25,15 @@ class AuthController extends Controller
             'role' => User::ROLE_PLAYER,
         ]);
 
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (Throwable $exception) {
+            // Account access and order history must remain available when SMTP is not configured.
+            Log::warning('Customer verification email could not be sent', [
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         $token = $user->createToken('player')->plainTextToken;
 

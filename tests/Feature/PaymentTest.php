@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Competition;
 use App\Models\CompetitionRegistration;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Sale;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,6 +98,45 @@ class PaymentTest extends TestCase
         $response->assertOk();
         $this->assertSame('completed', $sale->fresh()->status);
         $this->assertSame('paid', $registration->fresh()->payment_status);
+    }
+
+    public function test_verify_completes_pending_sale_and_marks_order_paid(): void
+    {
+        $product = Product::create([
+            'name' => 'Chateau Reserve',
+            'type' => 'wine',
+            'price' => 25000,
+            'is_stocked' => true,
+            'stock_quantity' => 10,
+            'low_stock_threshold' => 2,
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/orders', [
+            'name' => 'Jane Doe',
+            'phone' => '08012345678',
+            'email' => 'jane@example.com',
+            'fulfillment_type' => 'pickup',
+            'items' => [['product_id' => $product->id, 'quantity' => 2]],
+        ])->assertCreated();
+
+        $order = Order::first();
+        $sale = Sale::findOrFail($order->sale_id);
+        $sale->update(['payment_reference' => 'FFP-ORDER-REF']);
+
+        Http::fake([
+            'api.paystack.co/transaction/verify/*' => Http::response([
+                'status' => true,
+                'data' => ['status' => 'success', 'reference' => 'FFP-ORDER-REF'],
+            ]),
+        ]);
+
+        $response = $this->getJson('/api/payments/verify/FFP-ORDER-REF');
+
+        $response->assertOk();
+        $this->assertSame('completed', $sale->fresh()->status);
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertSame(8, $product->fresh()->stock_quantity);
     }
 
     public function test_webhook_rejects_invalid_signature(): void

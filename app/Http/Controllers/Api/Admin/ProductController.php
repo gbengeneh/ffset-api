@@ -62,13 +62,14 @@ class ProductController extends Controller
 
     public function uploadImage(UploadProductImageRequest $request, Product $product)
     {
-        if ($product->image_url && Str::startsWith($product->image_url, '/storage/')) {
-            Storage::disk('public')->delete(Str::after($product->image_url, '/storage/'));
+        $existingPath = $product->image_url ? parse_url($product->image_url, PHP_URL_PATH) : null;
+        if ($existingPath && Str::startsWith($existingPath, '/storage/')) {
+            Storage::disk('public')->delete(Str::after($existingPath, '/storage/'));
         }
 
         $path = $request->file('image')->store('products', 'public');
 
-        $product->update(['image_url' => Storage::url($path)]);
+        $product->update(['image_url' => url(Storage::url($path))]);
 
         return response()->json($product);
     }

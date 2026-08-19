@@ -18,6 +18,10 @@ class DatabaseSeeder extends Seeder
             EventSeeder::class,
             CompetitionSeeder::class,
             GallerySeeder::class,
+            CarSeeder::class,
+            MarketplaceCategorySeeder::class,
+            MarketplaceDemoSeeder::class,
+            MarketplaceDeliveryZoneSeeder::class,
         ]);
     }
 }

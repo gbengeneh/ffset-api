@@ -45,4 +45,17 @@ return [
         'public_key' => env('PAYSTACK_PUBLIC_KEY'),
     ],
 
+    'whatsapp' => [
+        'token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v23.0'),
+        'language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'en'),
+        'templates' => [
+            'order_received' => env('WHATSAPP_TEMPLATE_ORDER_RECEIVED'), 'payment_confirmed' => env('WHATSAPP_TEMPLATE_PAYMENT_CONFIRMED'),
+            'processing' => env('WHATSAPP_TEMPLATE_PROCESSING'), 'ready_for_pickup' => env('WHATSAPP_TEMPLATE_READY'),
+            'dispatched' => env('WHATSAPP_TEMPLATE_DISPATCHED'), 'delivered' => env('WHATSAPP_TEMPLATE_DELIVERED'),
+            'cancelled' => env('WHATSAPP_TEMPLATE_CANCELLED'), 'refunded' => env('WHATSAPP_TEMPLATE_REFUNDED'),
+        ],
+    ],
+
 ];

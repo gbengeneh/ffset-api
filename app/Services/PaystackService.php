@@ -51,6 +51,13 @@ class PaystackService
         return hash_equals($expected, $signature);
     }
 
+    public function refund(string $reference, int $amount): array
+    {
+        $response=Http::withToken($this->secretKey())->post(self::BASE_URL.'/refund',['transaction'=>$reference,'amount'=>$amount]);
+        if(!$response->successful())throw new RuntimeException('Paystack refund failed: '.$response->body());
+        return $response->json('data')??[];
+    }
+
     private function secretKey(): string
     {
         $key = config('services.paystack.secret_key');

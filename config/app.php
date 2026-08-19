@@ -56,6 +56,9 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 
+    'frontend_autos_url' => env('FRONTEND_AUTOS_URL', 'http://localhost:3001'),
+    'marketplace_order_expiry_minutes' => env('MARKETPLACE_ORDER_EXPIRY_MINUTES', 60),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

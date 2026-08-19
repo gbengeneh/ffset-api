@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('sale_number')->unique();
             $table->foreignId('staff_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('customer_name')->nullable();
-            $table->enum('source', ['pos', 'wine_reservation', 'competition_entry'])->default('pos');
+            $table->enum('source', ['pos', 'wine_reservation', 'competition_entry', 'website_order', 'car_deposit'])->default('pos');
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->string('payment_method')->nullable();
             $table->decimal('subtotal', 12, 2)->default(0);

@@ -18,7 +18,7 @@ class UpdateStaffRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('staff'))],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['sometimes', 'in:admin,cashier'],
+            'role' => ['sometimes', 'in:admin,cashier,inventory'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

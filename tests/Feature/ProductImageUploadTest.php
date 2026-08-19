@@ -32,9 +32,10 @@ class ProductImageUploadTest extends TestCase
         ]);
 
         $response->assertOk();
-        $this->assertStringStartsWith('/storage/products/', $response->json('image_url'));
+        $this->assertStringContainsString('/storage/products/', $response->json('image_url'));
+        $this->assertStringStartsWith('http', $response->json('image_url'));
 
-        $path = str_replace('/storage/', '', $response->json('image_url'));
+        $path = str_replace('/storage/', '', parse_url($response->json('image_url'), PHP_URL_PATH));
         Storage::disk('public')->assertExists($path);
     }
 

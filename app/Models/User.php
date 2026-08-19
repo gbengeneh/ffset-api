@@ -12,7 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'phone', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'phone', 'is_active', 'delivery_address', 'preferred_delivery_zone_id', 'preferred_fulfillment_type', 'whatsapp_opt_in'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -22,6 +22,8 @@ class User extends Authenticatable implements MustVerifyEmail
     public const ROLE_ADMIN = 'admin';
 
     public const ROLE_CASHIER = 'cashier';
+
+    public const ROLE_INVENTORY = 'inventory';
 
     public const ROLE_PLAYER = 'player';
 
@@ -47,6 +49,17 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'whatsapp_opt_in' => 'boolean',
         ];
+    }
+
+    public function marketplaceOrders()
+    {
+        return $this->hasMany(MarketplaceOrder::class, 'player_id');
+    }
+
+    public function preferredDeliveryZone()
+    {
+        return $this->belongsTo(MarketplaceDeliveryZone::class, 'preferred_delivery_zone_id');
     }
 }

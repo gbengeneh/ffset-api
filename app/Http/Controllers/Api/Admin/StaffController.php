@@ -11,7 +11,7 @@ class StaffController extends Controller
 {
     public function index()
     {
-        $staff = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_CASHIER])
+        $staff = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_CASHIER, User::ROLE_INVENTORY])
             ->orderBy('name')
             ->paginate(20);
 
