@@ -21,7 +21,7 @@ return [
 
     'allowed_origins' => array_values(array_unique(array_filter([
         env('FRONTEND_URL', 'http://localhost:3000'),
-        env('FRONTEND_AUTOS_URL', 'http://localhost:3001'),
+        env('FRONTEND_STORE_URL', env('FRONTEND_AUTOS_URL', 'http://localhost:3001')),
         'https://ffsetlounge.com',
         'https://www.ffsetlounge.com',
         'https://theffset.com',
